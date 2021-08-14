@@ -1,14 +1,14 @@
-from bs4 import BeautifulSoup  # type: ignore
-import model
+from bs4 import BeautifulSoup
+import bs4  # type: ignore
+from .model import PostItem
 import requests
 import json
 import time
 
-from requests import models
 
 
-def list_add_things(list_temp: list, class_temp: model.PostItem, pk: int):
-    """ append things into a temp list to export all"""
+def list_add_things(list_temp: list, class_temp: PostItem, pk: int):
+    """ append model element into a temp list to export json file with pk is id """
     list_temp.append({"model": "myapp.bs4Scraping",
                       "pk": pk,
                       "fields": {
@@ -21,6 +21,7 @@ def list_add_things(list_temp: list, class_temp: model.PostItem, pk: int):
                           "time_post": class_temp.time_post
                       }})
 
+
 def export_file(list: list):
     """ export the json file from list given"""
     with open("data.json", "w") as f:
@@ -28,9 +29,9 @@ def export_file(list: list):
         f.write(y)
 
 
-def tr_soup(amount: int, url: str) -> list:
-    """ Return the list page scripts with given amount and it's url """
-    list_temp=[]
+def gather_all_scripts(amount: int, url: str) -> list:
+    """ Get the scripts of the website we want to scrape then put it into a soup"""
+    list_temp = []
     temp_source = requests.get(url).text
     list_temp.append(temp_source)
     if(amount > 1):
@@ -41,24 +42,28 @@ def tr_soup(amount: int, url: str) -> list:
     return list_temp
 
 
+def soup_find_specific(tag: str, name_class: str, a_soup: bs4.BeautifulSoup) -> bs4.element.ResultSet:
+    """ Faster way to use find function in bs4 """
+    return a_soup.find_all(tag, class_=name_class)
+
+
 def scraping_web(amount: int, url: str):
     """Start scraping web with given amount page and the url of that page"""
-    page_tobe_scraped = tr_soup(amount, url)
-    my_scripts_list = [] # type: list[str]
+    my_scripts_list = []  # type: list[str]
     # Temp list for all of things
+    script = gather_all_scripts(amount, url)
     start_time = time.time()
     # Declare all needed variable
-    pages = len(page_tobe_scraped)
-    soup = BeautifulSoup(page_tobe_scraped[0], 'lxml')
-    tr_element = soup.find_all("tr", class_="athing")
-    td_element = soup.find_all("td", class_="subtext")
-    zone = len(tr_element)
+    soup = BeautifulSoup(script[0], 'lxml')
+    tr_element = soup_find_specific("tr", "athing", soup)
+    td_element = soup_find_specific("td", "subtext", soup)
     current_page = 0
     pk = 0
     index = 0
-    """Start scraping"""
-    while(current_page < pages):
 
+    """Start scraping"""
+    while(current_page < amount):
+        """Get all the things we need"""
         rank = tr_element[index].find("span", class_="rank").text
         title = tr_element[index].find("a", class_="storylink").text
         link = tr_element[index].find("a", class_="storylink")['href']
@@ -80,21 +85,22 @@ def scraping_web(amount: int, url: str):
         else:
             time_post = td_element[index].find(
                 "a", {"href": "item?id="+str(id_post)}).text
-        temp_postitem = model.PostItem(rank,title,id_post,link,point,user,time_post)
+        temp_postitem = PostItem(
+            rank, title, id_post, link, point, user, time_post)
 
-        """Append things into list"""
-        list_add_things(my_scripts_list,temp_postitem,pk)  
-        
+        """Append things into list for extracting json file"""
+        list_add_things(my_scripts_list, temp_postitem, pk)
+
         pk += 1
-        if(index < zone-1):       
+        if(index < len(tr_element)-1):
             index += 1
         else:
             try:
                 current_page += 1
                 index = 0
-                soup = BeautifulSoup(page_tobe_scraped[current_page], 'lxml')
-                tr_element = soup.find_all("tr", class_="athing")
-                td_element = soup.find_all("td", class_="subtext")
+                soup = BeautifulSoup(script[current_page], 'lxml')
+                tr_element = soup_find_specific("tr", "athing", soup)
+                td_element = soup_find_specific("td", "subtext", soup)
             except IndexError:
                 print("Finished all in:")
 
