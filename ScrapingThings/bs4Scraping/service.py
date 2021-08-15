@@ -1,11 +1,6 @@
-from bs4 import BeautifulSoup
-import bs4  # type: ignore
-from .model import PostItem
-import requests
-import json
-import time
-
-
+from bs4 import BeautifulSoup # type: ignore
+import time,json,requests
+from model import PostItem
 
 def list_add_things(list_temp: list, class_temp: PostItem, pk: int):
     """ append model element into a temp list to export json file with pk is id """
@@ -18,9 +13,9 @@ def list_add_things(list_temp: list, class_temp: PostItem, pk: int):
                           "link": class_temp.link,
                           "point": class_temp.point,
                           "user": class_temp.user,
-                          "time_post": class_temp.time_post
+                          "time_post": class_temp.time_post,
+                          "comment":class_temp.comment
                       }})
-
 
 def export_file(list: list):
     """ export the json file from list given"""
@@ -28,82 +23,68 @@ def export_file(list: list):
         y = json.dumps(list, indent=4)
         f.write(y)
 
-
-def gather_all_scripts(amount: int, url: str) -> list:
+def gather_all_scripts(page_amount: int, website_url: str) -> list:
     """ Get the scripts of the website we want to scrape then put it into a soup"""
+    pages=1
     list_temp = []
-    temp_source = requests.get(url).text
+    temp_source = requests.get(website_url).text
     list_temp.append(temp_source)
-    if(amount > 1):
-        for x in range(2, amount+1):
-            temp_source = requests.get(
-                url+"news?p="+str(x)).text
-            list_temp.append(temp_source)
+    temp_url=website_url
+    while(pages<page_amount):
+        soup = BeautifulSoup(temp_source,'lxml')
+        website_url=temp_url+soup.find("a",class_='morelink')['href']
+        temp_source = requests.get(website_url).text
+        list_temp.append(temp_source)
+        pages+=1
+
     return list_temp
 
-
-def soup_find_specific(tag: str, name_class: str, a_soup: bs4.BeautifulSoup) -> bs4.element.ResultSet:
-    """ Faster way to use find function in bs4 """
-    return a_soup.find_all(tag, class_=name_class)
-
-
-def scraping_web(amount: int, url: str):
-    """Start scraping web with given amount page and the url of that page"""
-    my_scripts_list = []  # type: list[str]
-    # Temp list for all of things
-    script = gather_all_scripts(amount, url)
+def scraping_main(pages_amount: int,website_url: str):
+    for_extracting_list=[]
+    pages=0
+    pk=0
+    script=gather_all_scripts(pages_amount,website_url)
     start_time = time.time()
-    # Declare all needed variable
-    soup = BeautifulSoup(script[0], 'lxml')
-    tr_element = soup_find_specific("tr", "athing", soup)
-    td_element = soup_find_specific("td", "subtext", soup)
-    current_page = 0
-    pk = 0
-    index = 0
+    soup=BeautifulSoup(script[pages],'lxml')
+    pair_one=soup.find("tr",class_="athing")
+    while(pair_one is not None ):
+    
+        pair_two = pair_one.nextSibling
+        id_post = pair_one['id']
+        rank = pair_one.contents[1].text
+        link = pair_one.contents[4].a['href']
+        title = pair_one.contents[4].a.text
 
-    """Start scraping"""
-    while(current_page < amount):
-        """Get all the things we need"""
-        rank = tr_element[index].find("span", class_="rank").text
-        title = tr_element[index].find("a", class_="storylink").text
-        link = tr_element[index].find("a", class_="storylink")['href']
-        id_post = tr_element[index]['id']
-
-        if td_element[index].find("span", {"id": "score_"+tr_element[index]['id']}) is None:
-            point = "null"
+        if(pair_two.contents[1].find('span', class_="score") is not None):
+            point = pair_two.contents[1].find('span', class_="score").text
         else:
-            point = td_element[index].find(
-                "span", {"id": "score_"+tr_element[index]['id']}).text
-
-        if(td_element[index].find("a", class_="hnuser") is None):
-            user = "unknown"
+            point = "0 points"
+        if(pair_two.contents[1].find('a', class_="hnuser") is not None):
+            user = pair_two.contents[1].find('a', class_="hnuser").text
         else:
-            user = td_element[index].find("a", class_="hnuser").text
+            user = "unknown!!!"
 
-        if(td_element[index].find("a", {"href": "item?id="+str(id_post)}) is None):
-            time_post = "unknown"
-        else:
-            time_post = td_element[index].find(
-                "a", {"href": "item?id="+str(id_post)}).text
+        time_post = pair_two.contents[1].find('span', class_="age").a.text
+        try:
+            comment = pair_two.contents[1].find_all('a', {'href':"item?id="+id_post})[1].text.replace("\u00a0"," ")
+        except IndexError:
+            comment = "Not available"
+
         temp_postitem = PostItem(
-            rank, title, id_post, link, point, user, time_post)
+            rank, title, id_post, link, point, user, time_post,comment)
+        list_add_things(for_extracting_list,temp_postitem,pk)
+        pk+=1
+        pair_one = pair_one.find_next("tr", class_="athing")
 
-        """Append things into list for extracting json file"""
-        list_add_things(my_scripts_list, temp_postitem, pk)
-
-        pk += 1
-        if(index < len(tr_element)-1):
-            index += 1
-        else:
+        if(pair_one is None and pages<pages_amount):     
+            pages+=1      
             try:
-                current_page += 1
-                index = 0
-                soup = BeautifulSoup(script[current_page], 'lxml')
-                tr_element = soup_find_specific("tr", "athing", soup)
-                td_element = soup_find_specific("td", "subtext", soup)
+                soup=BeautifulSoup(script[pages],'lxml')           
+                pair_one=soup.find("tr",class_="athing")
             except IndexError:
-                print("Finished all in:")
-
-    export_file(my_scripts_list)
-
+                print("Finish")
+    export_file(for_extracting_list)
     print("--- %s seconds ---" % (time.time() - start_time))
+
+
+    
