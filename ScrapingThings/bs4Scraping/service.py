@@ -19,7 +19,7 @@ def list_add_things(list_temp: list, class_temp: PostItem, pk: int):
 
 def export_file(list: list):
     """ export the json file from list given"""
-    with open("data.json", "w") as f:
+    with open("getData/data.json", "w") as f:
         y = json.dumps(list, indent=4)
         f.write(y)
 
