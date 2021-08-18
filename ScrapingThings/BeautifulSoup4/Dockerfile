@@ -1,6 +1,6 @@
 FROM python:3
 
-ADD ./BeautifulSoup4 .
+ADD . .
 RUN pip install -r requirements.txt
 CMD [ "python","/bs4Scraping/main.py" ]
 
