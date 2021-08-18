@@ -40,6 +40,7 @@ def gather_all_scripts(page_amount: int, website_url: str) -> list:
     return list_temp
 
 def scraping_main(pages_amount: int,website_url: str):
+    """Main Scraping Function"""
     for_extracting_list=[]
     page_select=0
     position=0
