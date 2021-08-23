@@ -9,6 +9,7 @@ def export_file(list: list):
         y = json.dumps(list, indent=4)
         f.write(y)
 
+from requests.models import ChunkedEncodingError
 
 def list_add_things(list_temp: list, class_temp: PostItem, position: int):
     """ append model element into a temp list to export json file with position is specific id """
@@ -117,3 +118,6 @@ def scraping_main(page_amount: int, url: str):
 
     export_file(for_extracting_list)
     print("--- %s seconds ---" % (time.time() - start_time))
+
+
+scraping_main(5, "https://news.ycombinator.com/")

@@ -1,9 +1,6 @@
 from bs4 import BeautifulSoup # type: ignore
+import time,json,requests
 from model import PostItem
-import time
-import json
-import requests
-
 
 def list_add_things(list_temp: list, class_temp: PostItem, position: int):
     """ append model element into a temp list to export json file with position is specific id """
