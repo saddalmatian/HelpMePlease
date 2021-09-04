@@ -1,17 +1,21 @@
-import lxml.html # type: ignore
+import lxml.html  # type: ignore
 import requests
-import time,json
+import time
+import json
 from model import PostItem
 
-def export_file(list: list):
+
+def export_file(
+        list: list):
     """ export the json file from list given"""
     with open("getData/data.json", "w") as f:
         y = json.dumps(list, indent=4)
         f.write(y)
 
-from requests.models import ChunkedEncodingError
 
-def list_add_things(list_temp: list, class_temp: PostItem, position: int):
+def list_add_things(
+        list_temp: list, class_temp: PostItem,
+        position: int):
     """ append model element into a temp list to export json file with position is specific id """
     list_temp.append({"model": "myapp.bs4Scraping",
                       "pk": position,
@@ -23,16 +27,20 @@ def list_add_things(list_temp: list, class_temp: PostItem, position: int):
                           "point": class_temp.point,
                           "user": class_temp.user,
                           "time_post": class_temp.time_post,
-                          "comment":class_temp.comment
+                          "comment": class_temp.comment
                       }})
 
 
-def path_append(current_path: str, appended_path: str) -> str:
+def path_append(
+        current_path: str, 
+        appended_path: str) -> str:
     """Find child of current path"""
     return current_path+appended_path
 
 
-def gather_html(page_amount: int, website_url: str) -> list:
+def gather_html(
+        page_amount: int, 
+        website_url: str) -> list:
     """Get html content list of website with given amount"""
     current_page = 1
     temp_list = []
@@ -51,13 +59,15 @@ def gather_html(page_amount: int, website_url: str) -> list:
     return temp_list
 
 
-def scraping_main(page_amount: int, url: str):
+def scraping_main(
+        page_amount: int, 
+        url: str):
     """Main Scraping Function"""
-    for_extracting_list=[]# type: list[str]
-    position=0
+    for_extracting_list = []  # type: list[str]
+    position = 0
     pair = 1
-    
-    script=gather_html(page_amount,url)
+
+    script = gather_html(page_amount, url)
     start_time = time.time()
 
     athing_path = '//tr[@class="athing"]['+str(pair)+']'
@@ -91,18 +101,19 @@ def scraping_main(page_amount: int, url: str):
             time_post = "Unknown"
         try:
             comment = doc.xpath(path_append(athing_path_sibling,
-                                            '/td/a[3]/text()'))[0].replace("\u00a0"," ")
+                                            '/td/a[3]/text()'))[0].replace("\u00a0", " ")
         except IndexError:
             comment = "None"
         pair += 1
 
         temp_postitem = PostItem(
-            rank, title, id_post, link, point, user, time_post,comment)
-        list_add_things(for_extracting_list,temp_postitem,position)
-        position+=1
+            rank, title, id_post, link, point, user, time_post, comment)
+        list_add_things(for_extracting_list, temp_postitem, position)
+        position += 1
 
         athing_path = '//tr[@class="athing"]['+str(pair)+']'
-        athing_path_sibling = path_append(athing_path, '/following::tr[1]')
+        athing_path_sibling = path_append(
+                            athing_path, '/following::tr[1]')
         if(bool(doc.xpath(athing_path)) is False):
             current_page += 1
             try:
@@ -111,7 +122,7 @@ def scraping_main(page_amount: int, url: str):
                 pair = 1
                 athing_path = '//tr[@class="athing"]['+str(pair)+']'
                 athing_path_sibling = path_append(
-                    athing_path, '/following::tr[1]')
+                                    athing_path, '/following::tr[1]')
 
             except IndexError:
                 print("Finished")
@@ -119,5 +130,3 @@ def scraping_main(page_amount: int, url: str):
     export_file(for_extracting_list)
     print("--- %s seconds ---" % (time.time() - start_time))
 
-
-scraping_main(5, "https://news.ycombinator.com/")

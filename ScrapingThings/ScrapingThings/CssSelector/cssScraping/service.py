@@ -99,8 +99,7 @@ def scraping_main(page_amount: int, url: str):
                 temp=athing_select[index]         
             except IndexError:
                 current_page+=1
-                doc = lxml.html.fromstring(
-                (script)[current_page])
+                doc = lxml.html.fromstring((script)[current_page])
                 index=0
                 athing_select = doc.cssselect("tr.athing")
                 athing_sibling_select = doc.cssselect("tr.athing ~ tr > td.subtext")

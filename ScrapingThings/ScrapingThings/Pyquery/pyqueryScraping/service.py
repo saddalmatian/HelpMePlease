@@ -45,7 +45,6 @@ def scraping_main(pages_amount: int,website_url: str):
     """Main Scraping Function"""
     for_extracting_list=[]# type: list[str]
     position=0
-    pair = 1
     
     script=gather_all_scripts(pages_amount,website_url)
     start_time = time.time()
